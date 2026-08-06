@@ -1,4 +1,6 @@
 ## My first AI learning project.
 # This is Python, Ollama,Gemma 3:4b
-` cd E:\Deepak study\AIStudy\OpenSource\OllamaPython\.venv\Scripts\activate \n`
-` .venv\Scripts\activate `
+``` CMD 
+ >> cd E:\Deepak study\AIStudy\OpenSource\OllamaPython\.venv\Scripts\activate
+ >> .venv\Scripts\activate 
+ ```
