@@ -1,8 +1,24 @@
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from pydantic import BaseModel
+
+class InventoryResult(BaseModel):
+    item: str
+    current_stock: int
+    reorder_level: int
+    recommended_quantity: int
+    needs_reorder: bool
+    supplier:str
+    reason: str
+
+
 llm = ChatOllama(
     model="gemma3:4b"
+)
+
+structured_llm = llm.with_structured_output(
+    InventoryResult
 )
 
 prompt = ChatPromptTemplate.from_messages([
@@ -24,13 +40,18 @@ prompt = ChatPromptTemplate.from_messages([
                     Always explain your reasoning in simple business language. .
                     If you don't have enough information, ask the user for the missing information."""
     ),
-    MessagesPlaceholder(variable_name="history"),
+    MessagesPlaceholder(variable_name="history")
+    ,
     (
         "user",
+         "Item: {item}"
+         "Current stock: {current_stock}"
+        "Supplier: {supplier}"
+        "Reorder level: {reorder_level}"
         "{question}"
     )
 ])
-
+chain = prompt | structured_llm
 conversation_history = []
 
 print("=" * 50)
@@ -46,10 +67,16 @@ while True:
         print("Goodbye!")
         break
 
-    messages = prompt.invoke({
+    result  = chain.invoke({
         "history": conversation_history,
-        "question": question
+        "question": question,
+        "item": "Blue Shirt",
+        "current_stock": 40,
+        "reorder_level":20,
+        "supplier": "ABC Textiles"
     })
+    
+
     #print("\n--- Messages ---")
     #print(messages)
 
@@ -62,16 +89,23 @@ while True:
 
     print("\nGemma:")
     full_response = ""  
-    for chunk in llm.stream(messages):
-        # Get text from the current chunk
-        content = chunk.content
-        # Display immediately
-        print(content, end="", flush=True)
-        # Build complete response
-        full_response += content  # This is particularly important because you're also maintaining conversation history.
+    # for chunk in llm.stream(result):
+    #     # Get text from the current chunk
+    #     content = chunk.content
+    #     # Display immediately
+    #     print(content, end="", flush=True)
+    #     # Build complete response
+    #     full_response += content  # This is particularly important because you're also maintaining conversation history.
 
-    print()
+    # print()
 
+    print("Item:", result.item)
+    print("Current Stock:", result.current_stock)
+    print("Reorder Level:", result.reorder_level)
+    print("Needs Reorder:", result.needs_reorder)
+    print("Recommended_quantity:", result.recommended_quantity)
+    print("Reason:", result.reason)
+    full_response += str(result)
 
     # conversation_history.append({
     #     "role": "user",
