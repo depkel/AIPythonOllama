@@ -12,21 +12,23 @@ llm = ChatOllama(
 prompt = ChatPromptTemplate.from_messages([
     (
         "system",
-        "You are an inventory assistant."
+        "You are a Purchase Order Assistant."
     ),
     (
         "user",
-        "The item is {item} "
-        "Current quantity is {quantity}."
-        "Explain whether the inventory level may require attention."
+        "Item: {item}"
+        "Current stock: {stock}"
+        "Supplier: {supplier}"
+        "Explain the purchasing situation."
     )
 ])
 
 chain = prompt | llm
 
 response = chain.invoke({
-    "item": "shirt",
-     "quantity": 50
+    "item": "Blue Shirt",
+    "stock": 40,
+    "supplier": "ABC Textiles"
 })
 
 print(response.content)
