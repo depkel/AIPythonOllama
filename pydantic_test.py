@@ -19,7 +19,7 @@ class InventoryResult(BaseModel):
 # --------------------------------------------------
 
 llm = ChatOllama(
-    model="gemma3:4b"
+    model="qwen3:4b"
 )
 
 

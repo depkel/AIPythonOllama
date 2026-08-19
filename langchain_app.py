@@ -6,7 +6,7 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 
 llm = ChatOllama(
-    model="gemma3:4b"
+    model="qwen3:4b"
 )
 
 prompt = ChatPromptTemplate.from_messages([

@@ -1,7 +1,7 @@
 from ollama import chat
 msg = input("Enter your question>>")
 response = chat(
-    model="gemma3:4b",
+    model="qwen3:4b",
     messages=[
         {
             "role": "user",

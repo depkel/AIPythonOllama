@@ -48,7 +48,7 @@ def get_supplier(item_code: str,store_id: str) -> dict:
     return {
             "item_code": item_code,
             "store_id": store_id,
-            "Supplier": ItemSuppliers.get((item_code, store_id),"No Supplier found")
+            "supplier": ItemSuppliers.get((item_code, store_id),"No Supplier found")
         }
 
 
@@ -65,7 +65,7 @@ def get_reorder_policy(item_code: str, store_id: str):
     return {
             "item_code": item_code,
             "store_id": store_id,
-            "Reorder_Quantity": ItemReorderPolicy.get((item_code, store_id),0)
+            "reorder_quantity": ItemReorderPolicy.get((item_code, store_id),0)
         }
 
 
@@ -81,43 +81,50 @@ def get_reorder_policy(item_code: str, store_id: str):
 # print(get_inventory.args_schema)
 
 llm = ChatOllama(
-    model="gemma3:4b"
+    model="qwen3:4b"
 )
 
 # We're telling the model: "You have access to this tool."
-llm_with_tools = llm.bind_tools(  
-    [get_inventory,get_open_purchase_orders,get_supplier,get_reorder_policy]
+tools=[get_inventory,get_open_purchase_orders,get_supplier,get_reorder_policy];
+
+llm_with_tools = llm.bind_tools(tools)
+
+response = llm_with_tools.invoke(
+    "For SHIRT001 in store BLR001, what is the current inventory?"
 )
+print(response)
 
-# Manually invoke the tool
-result = get_inventory.invoke({
-    "item_code": "SHIRT001",
-    "store_id":"BLR001"
-})
+# region manual tool invoking  
+# # Manually invoke the tool
+# result = get_inventory.invoke({
+#     "item_code": "SHIRT001",
+#     "store_id":"BLR001"
+# })
 
-print("\nInventory Tool result:")
-print(result)
+# print("\nInventory Tool result:")
+# print(result)
 
-result2 = get_open_purchase_orders.invoke({
-    "item_code": "SHIRT001",
-    "store_id":"BLR001"
-})
+# result2 = get_open_purchase_orders.invoke({
+#     "item_code": "SHIRT001",
+#     "store_id":"BLR001"
+# })
 
-print("\n get_open_purchase_orders Tool result:")
-print(result2)
+# print("\n get_open_purchase_orders Tool result:")
+# print(result2)
 
-result3 = get_supplier.invoke({
-    "item_code": "SHIRT001",
-    "store_id":"BLR001"
-})
+# result3 = get_supplier.invoke({
+#     "item_code": "SHIRT001",
+#     "store_id":"BLR001"
+# })
 
-print("\n get_supplier Tool result:")
-print(result3)
+# print("\n get_supplier Tool result:")
+# print(result3)
 
-result4 = get_reorder_policy.invoke({
-    "item_code": "SHIRT001",
-    "store_id":"BLR001"
-})
+# result4 = get_reorder_policy.invoke({
+#     "item_code": "SHIRT001",
+#     "store_id":"BLR001"
+# })
 
-print("\n get_reorder_policy Tool result:")
-print(result4)
+# print("\n get_reorder_policy Tool result:")
+# print(result4)
+# endregion

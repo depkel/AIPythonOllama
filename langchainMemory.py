@@ -14,7 +14,7 @@ class InventoryResult(BaseModel):
 
 
 llm = ChatOllama(
-    model="gemma3:4b"
+    model="qwen3:4b"
 )
 
 structured_llm = llm.with_structured_output(

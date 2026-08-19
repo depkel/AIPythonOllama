@@ -45,7 +45,7 @@ while True:
     })
 
     response = chat(
-        model="gemma3:4b",
+        model="qwen3:4b",
         messages=conversation_history
     )
 
