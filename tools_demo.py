@@ -93,6 +93,7 @@ llm = ChatOllama(
 tools=[get_inventory,get_open_purchase_orders,get_supplier,get_reorder_policy];
 
 llm_with_tools = llm.bind_tools(tools)
+
 q1= "For SHIRT001 in store BLR001, what is the current inventory?"
 q2= "For SHIRT001 in store BLR001, tell me the current inventory and supplier?"
 q3="For SHIRT001 in BLR001, give me the inventory, incoming quantity, supplier and reorder quantity."
@@ -143,9 +144,9 @@ for tool_call in response.tool_calls:
     print(tool_result)
 
 
-    # --------------------------------------------------
-    # 9. Send result back to Qwen
-    # --------------------------------------------------
+# --------------------------------------------------
+# 9. Send result back to Qwen
+# --------------------------------------------------
 
     tool_messages.append(
         ToolMessage(
@@ -153,7 +154,6 @@ for tool_call in response.tool_calls:
             tool_call_id=tool_call["id"]
         )
     )
-
 
 # --------------------------------------------------
 # 10. Ask Qwen again with tool result
