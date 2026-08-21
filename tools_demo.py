@@ -1,7 +1,11 @@
 from langchain_ollama import ChatOllama
 from langchain_core.tools import tool
+from langchain_core.messages import ToolMessage
 
-
+# --------------------------------------------------
+# 1. Define Tools
+# --------------------------------------------------
+#region "Tools"
 @tool #Python decorator
 def get_inventory(item_code: str, store_id: str) -> dict:
     """Get current inventory for an item at a specific store."""
@@ -68,6 +72,7 @@ def get_reorder_policy(item_code: str, store_id: str):
             "reorder_quantity": ItemReorderPolicy.get((item_code, store_id),0)
         }
 
+#endregion
 
 # Display tool information
 
@@ -88,11 +93,91 @@ llm = ChatOllama(
 tools=[get_inventory,get_open_purchase_orders,get_supplier,get_reorder_policy];
 
 llm_with_tools = llm.bind_tools(tools)
+q1= "For SHIRT001 in store BLR001, what is the current inventory?"
+q2= "For SHIRT001 in store BLR001, tell me the current inventory and supplier?"
+q3="For SHIRT001 in BLR001, give me the inventory, incoming quantity, supplier and reorder quantity."
 
 response = llm_with_tools.invoke(
-    "For SHIRT001 in store BLR001, what is the current inventory?"
+   q3
 )
-print(response)
+print("\n Qwen response:")
+print(response.content)
+
+
+print("\nTool calls:")
+print(response.tool_calls)
+
+# --------------------------------------------------
+# 7. Create tool lookup dictionary
+# --------------------------------------------------
+
+tool_map = {
+    tool.name: tool
+    for tool in tools
+}
+# --------------------------------------------------
+# 8. Execute requested tools
+# --------------------------------------------------
+
+tool_messages = []
+
+for tool_call in response.tool_calls:
+
+    tool_name = tool_call["name"]
+
+    tool_args = tool_call["args"]
+
+    print("\nExecuting tool:")
+    print(tool_name)
+
+    print("Arguments:")
+    print(tool_args)
+
+    tool = tool_map[tool_name]
+
+    tool_result = tool.invoke(
+        tool_args
+    )
+
+    print("Tool result:")
+    print(tool_result)
+
+
+    # --------------------------------------------------
+    # 9. Send result back to Qwen
+    # --------------------------------------------------
+
+    tool_messages.append(
+        ToolMessage(
+            content=str(tool_result),
+            tool_call_id=tool_call["id"]
+        )
+    )
+
+
+# --------------------------------------------------
+# 10. Ask Qwen again with tool result
+# --------------------------------------------------
+
+messages = [
+    {
+        "role": "user",
+        "content": q3
+    },
+    response,
+    *tool_messages
+]
+
+final_response = llm_with_tools.invoke(
+    messages
+)
+
+# --------------------------------------------------
+# 11. Display final answer
+# --------------------------------------------------
+
+print("\nFinal answer:")
+print(final_response.content)
 
 # region manual tool invoking  
 # # Manually invoke the tool
