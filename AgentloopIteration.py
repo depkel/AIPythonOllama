@@ -7,8 +7,8 @@ from langchain_core.messages import ToolMessage
 # ============================================================
 # 1. TOOLS
 # ============================================================
-
-@tool
+# region "TOOLS"
+@tool  # Because you used LangChain's @tool, each tool has a .name "get_inventory"
 def get_inventory(item_code: str, store_id: str) -> dict:
     """Get the current inventory quantity for an item at a specific store."""
 
@@ -26,7 +26,7 @@ def get_inventory(item_code: str, store_id: str) -> dict:
     }
 
 
-@tool
+@tool #Because you used LangChain's @tool, each tool has a .name. "get_open_purchase_orders"
 def get_open_purchase_orders(
     item_code: str,
     store_id: str
@@ -47,7 +47,7 @@ def get_open_purchase_orders(
     }
 
 
-@tool
+@tool #Because you used LangChain's @tool, each tool has a .name. "get_supplier"
 def get_supplier(
     item_code: str,
     store_id: str
@@ -68,7 +68,7 @@ def get_supplier(
     }
 
 
-@tool
+@tool #Because you used LangChain's @tool, each tool has a .name. "get_reorder_policy"
 def get_reorder_policy(
     item_code: str,
     store_id: str
@@ -88,7 +88,7 @@ def get_reorder_policy(
         )
     }
 
-
+#endregion
 # ============================================================
 # 2. REGISTER TOOLS
 # ============================================================
@@ -118,13 +118,21 @@ llm_with_tools = llm.bind_tools(tools)
 
 
 # ============================================================
-# 5. CREATE TOOL LOOKUP
+# 5. CREATE TOOL LOOKUP It is a dictionary comprehension.
 # ============================================================
 
 tool_map = {
     tool.name: tool
     for tool in tools
 }
+
+# result:
+# tool_map = {
+#     "get_inventory": get_inventory,
+#     "get_open_purchase_orders": get_open_purchase_orders,
+#     "get_supplier": get_supplier,
+#     "get_reorder_policy": get_reorder_policy
+# }
 
 
 # ============================================================
@@ -218,7 +226,7 @@ for iteration in range(max_iterations):
 
     for tool_call in response.tool_calls:
 
-        tool_name = tool_call["name"]
+        tool_name = tool_call["name"]  # Your Python program needs to convert that string "get_inventory" into the actual function.
 
         tool_args = tool_call["args"]
 
@@ -232,8 +240,7 @@ for iteration in range(max_iterations):
         # Find actual Python tool
         # ----------------------------------------------------
 
-        tool = tool_map.get(tool_name)
-
+        tool = tool_map.get(tool_name) # fetch actual function from tool map using "tool name"
 
         if tool is None:
 
