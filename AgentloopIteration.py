@@ -7,22 +7,53 @@ from langchain_core.messages import ToolMessage
 # ============================================================
 # 1. TOOLS
 # ============================================================
-# region "TOOLS"
+# region "TOOLS"    
 @tool  # Because you used LangChain's @tool, each tool has a .name "get_inventory"
 def get_inventory(item_code: str, store_id: str) -> dict:
     """Get the current inventory quantity for an item at a specific store."""
+
+    # Validation layer  invalid -> error 
+    if not item_code:
+
+            return {
+                "success": False,
+                "error": "INVALID_ITEM_CODE",
+                "message": "item_code cannot be empty."
+            }
+
+
+    if not store_id:
+
+        return {
+            "success": False,
+            "error": "INVALID_STORE_ID",
+            "message": "store_id cannot be empty."
+        }
+
+
 
     inventory = {
         ("SHIRT001", "BLR001"): 45
     }
 
+    key = (item_code, store_id)
+
+    if key not in inventory:  # Business/data lookup  Not found → Error
+
+        return {
+            "success": False,
+            "error": "ITEM_NOT_FOUND",
+            "message": (
+                f"Item {item_code} was not found "
+                f"for store {store_id}."
+            )
+        }
+
     return {
+        "success": True,
         "item_code": item_code,
         "store_id": store_id,
-        "current_stock": inventory.get(
-            (item_code, store_id),
-            0
-        )
+        "current_stock": inventory[key]
     }
 
 
@@ -33,9 +64,7 @@ def get_open_purchase_orders(
 ) -> dict:
     """Get the total quantity of open purchase orders for an item at a specific store."""
 
-    open_orders = {
-        ("SHIRT001", "BLR001"): 1
-    }
+    open_orders = {("SHIRT001", "BLR001"): 1}
 
     return {
         "item_code": item_code,
@@ -54,9 +83,7 @@ def get_supplier(
 ) -> dict:
     """Get the supplier for an item at a specific store."""
 
-    suppliers = {
-        ("SHIRT001", "BLR001"): "ABC Textiles"
-    }
+    suppliers = {("SHIRT001", "BLR001"): "ABC Textiles"}
 
     return {
         "item_code": item_code,
@@ -73,19 +100,101 @@ def get_reorder_policy(
     item_code: str,
     store_id: str
 ) -> dict:
-    """Get the reorder quantity policy for an item at a specific store."""
+    """Get the reorder level and reorder quantity policy."""
 
     policies = {
-        ("SHIRT001", "BLR001"): 10
+        ("SHIRT001", "BLR001"): {
+            "reorder_level": 50,
+            "reorder_quantity": 10
+        }
     }
 
+    key = (item_code, store_id)
+
+    if key not in policies:
+
+        return {
+            "success": False,
+            "error": "POLICY_NOT_FOUND",
+            "message": (
+                f"No reorder policy found for "
+                f"{item_code} at {store_id}"
+            )
+        }
+
+    policy = policies[key]
+
     return {
+        "success": True,
         "item_code": item_code,
         "store_id": store_id,
-        "reorder_quantity": policies.get(
-            (item_code, store_id),
-            0
-        )
+        "reorder_level": policy["reorder_level"],
+        "reorder_quantity": policy["reorder_quantity"]
+    }
+
+# deterministic validator is always required 
+@tool
+def validate_reorder_quantity(
+    item_code: str,
+    recommended_quantity: int
+) -> dict:
+    """Validate a recommended purchase order quantity."""
+
+    if recommended_quantity < 0:
+
+        return {
+            "success": False,
+            "valid": False,
+            "error": "NEGATIVE_QUANTITY",
+            "message": "Reorder quantity cannot be negative."
+        }
+
+
+    if recommended_quantity > 1000:
+
+        return {
+            "success": False,
+            "valid": False,
+            "error": "QUANTITY_TOO_LARGE",
+            "message": "Reorder quantity exceeds the allowed limit."
+        }
+
+
+    return {
+        "success": True,
+        "valid": True,
+        "item_code": item_code,
+        "recommended_quantity": recommended_quantity
+    }
+
+def calculate_reorder_decision(
+    current_stock: int,
+    open_order_quantity: int,
+    reorder_level: int,
+    reorder_quantity: int
+) -> dict:
+
+    available_stock = (
+        current_stock +
+        open_order_quantity
+    )
+
+    needs_reorder = (
+        available_stock < reorder_level
+    )
+
+    if needs_reorder:
+
+        recommended_quantity = reorder_quantity
+
+    else:
+
+        recommended_quantity = 0
+
+    return {
+        "available_stock": available_stock,
+        "needs_reorder": needs_reorder,
+        "recommended_quantity": recommended_quantity
     }
 
 #endregion
@@ -144,7 +253,16 @@ For SHIRT001 in store BLR001,
 give me the inventory, incoming quantity,
 supplier and reorder quantity.
 """
-
+If_Wrong_Item  = """
+For SHIRT999 in store BLR001,
+give me the inventory, incoming quantity,
+supplier and reorder quantity.
+"""
+If_Wrong_Store  = """
+For SHIRT001 in store BLR999,
+give me the inventory, incoming quantity,
+supplier and reorder quantity.
+"""
 
 # ============================================================
 # 7. INITIAL MESSAGE
@@ -153,7 +271,7 @@ supplier and reorder quantity.
 messages = [
     {
         "role": "user",
-        "content": user_question
+        "content": If_Wrong_Store #user_question
     }
 ]
 
@@ -173,7 +291,7 @@ for iteration in range(max_iterations):
 
     print("\n")
     print("=" * 60)
-    print(f"AGENT ITERATION: {iteration + 1} Calling LLM...")
+    print(f"Agent Iteration: {iteration + 1} Calling LLM...")
     print("=" * 60)
 
 
@@ -192,7 +310,7 @@ for iteration in range(max_iterations):
 
         print("\nNo more tool calls.")
 
-        print("\nFINAL ANSWER:")
+        print("\nFinal Answer:")
         print(response.content)
 
         break
@@ -242,42 +360,37 @@ for iteration in range(max_iterations):
 
         tool = tool_map.get(tool_name) # fetch actual function from tool map using "tool name"
 
-        if tool is None:
+        if tool is None:   # A. Unknown tool
 
-            print(
-                f"ERROR: Tool '{tool_name}' not found."
-            )
+                tool_result = {
+                    "success": False,
+                    "error": "UNKNOWN_TOOL",
+                    "message": (
+                        f"Tool '{tool_name}' does not exist."
+                    )
+                }
 
-            continue
+        else:
 
 
         # ----------------------------------------------------
         # Execute tool
         # ----------------------------------------------------
 
-        try:
+            try:
 
-            tool_result = tool.invoke(
-                tool_args
-            )
+                tool_result = tool.invoke(tool_args)
 
+            except Exception as e:   # Tool execution error if database is down or API is not available 
 
-            print(
-                f"  Result    : {tool_result}"
-            )
+                tool_result = {
+                "success": False,
+                "error": "TOOL_EXECUTION_ERROR",
+                "message": str(e)
+                }
 
-
-        except Exception as e:
-
-            print(
-                f"  Tool Error: {e}"
-            )
-
-            tool_result = {
-                "error": str(e)
-            }
-
-
+        print("Tool result:")
+        print(tool_result)   
         # ----------------------------------------------------
         # Send tool result back to LLM
         # ----------------------------------------------------
@@ -298,10 +411,20 @@ else:
 
     print("\n")
     print("=" * 60)
-    print("MAXIMUM ITERATIONS REACHED")
+    print("Maximum Iterations Reached")
     print("=" * 60)
 
     print(
         f"The agent stopped after "
         f"{max_iterations} iterations."
     )
+
+
+result = calculate_reorder_decision(
+    current_stock=45,
+    open_order_quantity=1,
+    reorder_level=50,
+    reorder_quantity=10
+)
+
+print(result)
